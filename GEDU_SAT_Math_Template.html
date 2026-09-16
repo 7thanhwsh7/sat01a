@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAT Math Practice — Template</title>
+<script src="https://www.desmos.com/api/v1.9/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+<style>
+  /* ==========================================================
+     BẠN CHỈ CẦN SỬA 3 CHỖ ĐỂ DÙNG CHO 1 ĐỀ MỚI:
+       1. Hằng số CONFIG ở đầu thẻ <script> (TEST_NAME, WEBAPP_URL, TIME_LIMIT_MINUTES)
+       2. Mảng QUESTIONS bên dưới CONFIG — thêm/sửa câu hỏi
+       3. (Tùy chọn) đổi tiêu đề trang ở thẻ <title> phía trên
+     Không cần sửa gì trong phần CSS hay logic JS còn lại.
+     ========================================================== */
+  :root{
+    --navy:#0f2a4a; --navy2:#16375f; --line:#e1e6ec; --text:#1c2733; --muted:#6b7686;
+    --bg:#f7f8fa; --accent:#c8952b;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{font-family:'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);
+       display:flex;flex-direction:column;min-height:100vh;}
+
+  /* ---------- HEADER ---------- */
+  header{background:var(--navy);color:#fff;flex-shrink:0;padding:12px 22px;
+         display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
+  header .title{font-size:15px;font-weight:600;}
+  header .sub{font-size:12px;color:#c9d3e0;}
+  #timer{font-variant-numeric:tabular-nums;font-weight:700;font-size:18px;letter-spacing:.5px;
+         background:rgba(255,255,255,.1);border-radius:6px;padding:6px 14px;}
+  #timer.warn{color:#ffd166;}
+  #timer.critical{color:#ff6b6b;}
+  .header-right{display:flex;align-items:center;gap:10px;}
+  #calcToggleBtn{background:transparent;border:1px solid rgba(255,255,255,.4);color:#fff;
+                 border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;font-weight:600;}
+  #calcToggleBtn:hover{background:rgba(255,255,255,.12);}
+  #calcToggleBtn.active{background:var(--accent);border-color:var(--accent);}
+
+  /* ---------- MODAL MÁY TÍNH DESMOS ---------- */
+  .calc-modal{position:fixed;top:76px;right:24px;width:420px;max-width:92vw;height:480px;
+              background:#fff;border:1px solid var(--line);border-radius:12px;
+              box-shadow:0 12px 32px rgba(15,42,74,.28);display:none;flex-direction:column;
+              z-index:500;overflow:hidden;}
+  .calc-modal.open{display:flex;}
+  .calc-modal-header{background:var(--navy2);color:#fff;padding:9px 14px;
+                     display:flex;justify-content:space-between;align-items:center;
+                     font-size:13px;font-weight:600;flex-shrink:0;}
+  .calc-modal-header button{background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;}
+  .calc-container{flex:1;min-height:0;}
+  @media (max-width:760px){
+    .calc-modal{left:12px;right:12px;width:auto;top:64px;height:60vh;}
+  }
+
+  /* ---------- MAIN: 2 CỘT ---------- */
+  main{flex:1;display:flex;min-height:0;}
+  .left-panel, .right-panel{padding:24px;overflow-y:auto;}
+  .left-panel{flex:1;background:#fbfcfe;border-right:1px solid var(--line);}
+  .right-panel{flex:1;background:#fff;}
+  .domain-badge{display:inline-block;background:#eef2f8;color:var(--navy2);
+                font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;margin-bottom:14px;}
+  .qnum-label{font-size:13px;color:var(--muted);margin-bottom:10px;}
+
+  /* ẢNH TRONG ĐỀ — bắt buộc responsive, không bao giờ méo/vỡ layout */
+  .left-panel img{max-width:100%;height:auto;display:block;margin:10px auto;border:1px solid var(--line);border-radius:6px;}
+  .no-image-note{font-size:13px;color:var(--muted);font-style:italic;}
+
+  .question-text{font-size:16px;line-height:1.6;margin-bottom:20px;}
+  .options{display:flex;flex-direction:column;gap:12px;}
+  .opt{display:flex;align-items:center;gap:12px;border:1.5px solid var(--line);border-radius:10px;
+       padding:13px 16px;cursor:pointer;font-size:15px;transition:background-color .1s,border-color .1s;}
+  .opt:hover{border-color:#9fb3cc;}
+  .opt.selected{border-color:var(--navy2);background:#eaf1fb;}
+  .opt-letter{flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--navy2);
+              color:var(--navy2);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .opt.selected .opt-letter{background:var(--navy2);color:#fff;}
+
+  /* ---------- FOOTER ---------- */
+  footer{flex-shrink:0;background:#fff;border-top:1px solid var(--line);padding:14px 22px;
+         display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  button.btn{border:none;border-radius:22px;padding:11px 26px;font-size:14px;font-weight:600;
+             cursor:pointer;background:var(--navy2);color:#fff;}
+  button.btn:hover{background:var(--navy);}
+  button.btn:disabled{opacity:.35;cursor:not-allowed;}
+  button.btn.secondary{background:#fff;color:var(--navy2);border:1.5px solid var(--navy2);}
+  button.btn.secondary:hover{background:#eef2f8;}
+  button.btn.gold{background:var(--accent);}
+  button.btn.gold:hover{background:#b3831f;}
+
+  /* ---------- MÀN HÌNH BẮT ĐẦU / NỘP BÀI ---------- */
+  #startScreen, #doneScreen{flex:1;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:32px 30px;
+        max-width:420px;width:100%;text-align:center;}
+  .card h2{color:var(--navy2);margin-top:0;}
+  .card input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;
+              font-size:14px;margin-bottom:12px;}
+  .card label{display:block;text-align:left;font-size:12.5px;color:var(--muted);margin-bottom:4px;}
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width:800px){
+    main{flex-direction:column;}
+    .left-panel{border-right:none;border-bottom:1px solid var(--line);}
+  }
+</style>
+</head>
+<body>
+
+<div id="startScreen">
+  <div class="card">
+    <h2>SAT Math Practice</h2>
+    <p style="color:var(--muted);font-size:13.5px;">Nhập tên và lớp trước khi bắt đầu làm bài.</p>
+    <label for="nameInput">Họ và tên</label>
+    <input type="text" id="nameInput" placeholder="Nguyễn Văn A">
+    <label for="clsInput">Lớp</label>
+    <input type="text" id="clsInput" placeholder="GE2023">
+    <button class="btn gold" style="width:100%;margin-top:6px;" onclick="startTest()">Bắt đầu làm bài</button>
+  </div>
+</div>
+
+<div id="testUI" style="display:none;flex-direction:column;flex:1;min-height:0;">
+  <header>
+    <div>
+      <div class="title" id="headerTitle">SAT Math Practice</div>
+      <div class="sub" id="qCounter">Question 1 of 3</div>
+    </div>
+    <div class="header-right">
+      <div id="timer">35:00</div>
+      <button id="calcToggleBtn" onclick="toggleCalculator()">🖩 Mở Máy tính</button>
+    </div>
+  </header>
+
+  <div id="calcModal" class="calc-modal">
+    <div class="calc-modal-header">
+      <span>Máy tính đồ thị (Desmos)</span>
+      <button onclick="toggleCalculator()">&times;</button>
+    </div>
+    <div id="calculator" class="calc-container"></div>
+  </div>
+
+  <main>
+    <div class="left-panel">
+      <span class="domain-badge" id="domainBadge">Algebra</span>
+      <div id="imageSlot"></div>
+    </div>
+    <div class="right-panel">
+      <div class="qnum-label" id="qnumLabel">Câu 1</div>
+      <div class="question-text" id="questionText"></div>
+      <div class="options" id="optionsList"></div>
+    </div>
+  </main>
+
+  <footer>
+    <button class="btn secondary" id="backBtn" onclick="goTo(-1)">&larr; Back</button>
+    <button class="btn gold" onclick="submitTest()">Nộp bài</button>
+    <button class="btn" id="nextBtn" onclick="goTo(1)">Next &rarr;</button>
+  </footer>
+</div>
+
+<div id="doneScreen" style="display:none;">
+  <div class="card">
+    <h2>Đã nộp bài!</h2>
+    <p style="color:var(--muted);font-size:14px;">Kết quả của bạn đã được gửi. Giáo viên sẽ chấm và cập nhật điểm trong Google Sheet.</p>
+  </div>
+</div>
+
+<script>
+/* ==================== CONFIG — SỬA 3 DÒNG NÀY CHO MỖI ĐỀ MỚI ==================== */
+const TEST_NAME = "SAT Math Practice 1";              // PHẢI khớp chính xác với tên đề đã nhập trong tab KEYS của Google Sheet
+const WEBAPP_URL = "https://script.google.com/macros/s/XXXXXXXXXXXXXXXX/exec"; // dán URL Web App sau khi Deploy Apps Script
+const TIME_LIMIT_MINUTES = 35;                          // 35 phút, khớp thời lượng module Toán thật của Digital SAT
+
+/* ==================== DỮ LIỆU CÂU HỎI MẪU (3 câu Toán giả lập) ====================
+   Mỗi câu hỏi có các trường:
+     id            : số thứ tự câu (bắt đầu từ 1, dùng để gửi đáp án lên Sheet)
+     domain        : dạng bài (hiện ở khung trái, badge màu xanh)
+     questionText  : nội dung câu hỏi (hiện ở khung phải)
+     image         : URL ảnh minh họa, hoặc null nếu câu không có hình
+     options       : mảng 4 phần tử [A, B, C, D]
+     correctKey    : đáp án đúng ("A"/"B"/"C"/"D") — hiện CHƯA dùng để chấm điểm tại
+                     đây (việc chấm điểm thật diễn ra ở Google Sheet dựa trên tab KEYS),
+                     trường này để dành cho tính năng chấm nhanh tại chỗ sau này nếu cần.
+   ================================================================================ */
+const QUESTIONS = [
+  {
+    id: 1,
+    domain: "Algebra",
+    questionText: "If 3x + 5 = 20, what is the value of x?",
+    image: null,
+    options: ["3", "5", "10", "15"],
+    correctKey: "B"
+  },
+  {
+    id: 2,
+    domain: "Geometry and Trigonometry",
+    questionText: "Line n is shown in the xy-plane. Line k (not shown) is perpendicular to line n. What is the slope of line k?",
+    image: "data:image/svg+xml;utf8," + encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 260">
+        <line x1="20" y1="230" x2="280" y2="230" stroke="#333" stroke-width="1.5"/>
+        <line x1="150" y1="20" x2="150" y2="250" stroke="#333" stroke-width="1.5"/>
+        <line x1="90" y1="250" x2="210" y2="20" stroke="#0f2a4a" stroke-width="3"/>
+        <text x="255" y="225" font-size="13">x</text>
+        <text x="158" y="30" font-size="13">y</text>
+        <text x="214" y="24" font-size="13" font-style="italic" fill="#0f2a4a">n</text>
+      </svg>`),
+    options: ["-1/6", "1/6", "-6", "6"],
+    correctKey: "A"
+  },
+  {
+    id: 3,
+    domain: "Problem-Solving and Data Analysis",
+    questionText: "The average (arithmetic mean) of five numbers is 12. If one of the numbers is removed, the average of the remaining four numbers is 10. What is the value of the number that was removed?",
+    image: null,
+    options: ["8", "16", "20", "24"],
+    correctKey: "C"
+  }
+];
+
+/* ==================== LOGIC — thường không cần sửa ==================== */
+let current = 0;
+const answers = {}; // { questionId: "A"/"B"/"C"/"D" }
+let studentName = "", studentClass = "";
+let timerInterval = null;
+let endTime = null;
+
+function startTest(){
+  studentName = document.getElementById('nameInput').value.trim();
+  studentClass = document.getElementById('clsInput').value.trim();
+  if(!studentName){ alert("Vui lòng nhập họ và tên."); return; }
+
+  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('testUI').style.display = 'flex';
+  document.getElementById('headerTitle').textContent = TEST_NAME;
+
+  endTime = Date.now() + TIME_LIMIT_MINUTES * 60000;
+  tickTimer();
+  timerInterval = setInterval(tickTimer, 1000);
+
+  renderQuestion();
+}
+
+function tickTimer(){
+  const el = document.getElementById('timer');
+  const remaining = endTime - Date.now();
+  if(remaining <= 0){
+    el.textContent = "00:00";
+    clearInterval(timerInterval);
+    alert("Hết giờ! Bài làm sẽ được nộp tự động.");
+    submitTest();
+    return;
+  }
+  const secs = Math.floor(remaining/1000);
+  const m = String(Math.floor(secs/60)).padStart(2,'0');
+  const s = String(secs%60).padStart(2,'0');
+  el.textContent = m + ":" + s;
+  el.classList.toggle('critical', secs < 300);
+  el.classList.toggle('warn', secs >= 300 && secs < 600);
+}
+
+function renderQuestion(){
+  const q = QUESTIONS[current];
+  document.getElementById('qCounter').textContent = `Question ${current+1} of ${QUESTIONS.length}`;
+  document.getElementById('qnumLabel').textContent = `Câu ${current+1}`;
+  document.getElementById('domainBadge').textContent = q.domain;
+  document.getElementById('questionText').textContent = q.questionText;
+
+  const imgSlot = document.getElementById('imageSlot');
+  imgSlot.innerHTML = q.image
+    ? `<img src="${q.image}" alt="Hình minh họa câu ${current+1}">`
+    : `<p class="no-image-note">Câu này không có hình minh họa.</p>`;
+
+  const letters = ['A','B','C','D'];
+  const optsDiv = document.getElementById('optionsList');
+  optsDiv.innerHTML = q.options.map((opt,i)=>{
+    const letter = letters[i];
+    const selected = answers[q.id] === letter;
+    return `<div class="opt${selected?' selected':''}" onclick="selectOption('${letter}')">
+              <span class="opt-letter">${letter}</span><span>${opt}</span>
+            </div>`;
+  }).join('');
+
+  document.getElementById('backBtn').disabled = current === 0;
+  document.getElementById('nextBtn').disabled = current === QUESTIONS.length - 1;
+}
+
+function selectOption(letter){
+  const q = QUESTIONS[current];
+  answers[q.id] = letter;
+  renderQuestion();
+}
+
+/* ==================== MÁY TÍNH ĐỒ THỊ (DESMOS) ==================== */
+let calculatorInstance = null;
+function toggleCalculator(){
+  const modal = document.getElementById('calcModal');
+  const btn = document.getElementById('calcToggleBtn');
+  const isOpen = modal.classList.toggle('open');
+  btn.classList.toggle('active', isOpen);
+  if(isOpen && !calculatorInstance){
+    const elt = document.getElementById('calculator');
+    calculatorInstance = Desmos.GraphingCalculator(elt, {
+      keypad: true,
+      expressions: true,
+      settingsMenu: true
+    });
+  }
+}
+
+function goTo(direction){
+  const next = current + direction;
+  if(next < 0 || next >= QUESTIONS.length) return;
+  current = next;
+  renderQuestion();
+}
+
+function submitTest(){
+  if(timerInterval) clearInterval(timerInterval);
+
+  // Chuẩn hóa answers thành object { "1": "A", "2": "B", ... } theo đúng thứ tự câu
+  const answersPayload = {};
+  QUESTIONS.forEach(q => { answersPayload[q.id] = answers[q.id] || ""; });
+
+  const params = new URLSearchParams({
+    test_name: TEST_NAME,
+    name: studentName,
+    cls: studentClass,
+    answers: JSON.stringify(answersPayload)
+  });
+
+  // Gửi bằng "Image beacon" để tránh lỗi CORS — không cần đọc phản hồi,
+  // chỉ cần trigger Google Apps Script ghi vào Sheet.
+  const beacon = new Image();
+  beacon.src = WEBAPP_URL + "?" + params.toString();
+
+  document.getElementById('testUI').style.display = 'none';
+  document.getElementById('doneScreen').style.display = 'flex';
+}
+</script>
+</body>
+</html>
